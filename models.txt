@@ -1,0 +1,233 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Nov 06, 2025 at 05:45 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+--
+-- Database: `budget_app`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `budgets`
+--
+
+CREATE TABLE `budgets` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `month` int(11) NOT NULL CHECK (`month` between 1 and 12),
+  `year` int(11) NOT NULL CHECK (`year` >= 2000),
+  `total_budget` decimal(10,2) NOT NULL CHECK (`total_budget` >= 0),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `budgets`
+--
+
+INSERT INTO `budgets` (`id`, `user_id`, `month`, `year`, `total_budget`, `created_at`, `updated_at`) VALUES
+(1, 1, 11, 2025, 10000.00, '2025-11-05 15:49:19', '2025-11-05 15:49:19');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `user_id`, `name`, `created_at`) VALUES
+(1, 1, 'Stomatolog', '2025-11-06 16:09:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `category_budgets`
+--
+
+CREATE TABLE `category_budgets` (
+  `id` int(11) NOT NULL,
+  `budget_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL CHECK (`amount` >= 0),
+  `remaining_amount` decimal(10,2) NOT NULL DEFAULT 0.00 CHECK (`remaining_amount` >= 0),
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `category_budgets`
+--
+
+INSERT INTO `category_budgets` (`id`, `budget_id`, `category_id`, `amount`, `remaining_amount`, `description`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 1500.00, 1500.00, 'Description', '2025-11-06 16:10:58', '2025-11-06 16:10:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `id` int(11) NOT NULL,
+  `budget_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `amount` decimal(10,2) NOT NULL CHECK (`amount` >= 0),
+  `description` text DEFAULT NULL,
+  `date` date NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `created_at`, `updated_at`) VALUES
+(1, 'test@example.com', '$2a$10$abcdefghijklmnopqrstuv', 'Test User', '2025-11-05 15:48:03', '2025-11-05 15:48:03');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_budget_per_month` (`user_id`,`month`,`year`),
+  ADD KEY `idx_budgets_user_date` (`user_id`,`year`,`month`);
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_category_per_user` (`user_id`,`name`),
+  ADD KEY `idx_categories_name` (`name`),
+  ADD KEY `idx_categories_user` (`user_id`);
+
+--
+-- Indexes for table `category_budgets`
+--
+ALTER TABLE `category_budgets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_category_per_budget` (`budget_id`,`category_id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `idx_category_budgets_budget` (`budget_id`);
+
+--
+-- Indexes for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_expenses_budget` (`budget_id`),
+  ADD KEY `idx_expenses_category` (`category_id`),
+  ADD KEY `idx_expenses_date` (`date`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `budgets`
+--
+ALTER TABLE `budgets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `category_budgets`
+--
+ALTER TABLE `category_budgets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `expenses`
+--
+ALTER TABLE `expenses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD CONSTRAINT `budgets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `categories`
+--
+ALTER TABLE `categories`
+  ADD CONSTRAINT `fk_categories_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `category_budgets`
+--
+ALTER TABLE `category_budgets`
+  ADD CONSTRAINT `category_budgets_ibfk_1` FOREIGN KEY (`budget_id`) REFERENCES `budgets` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `category_budgets_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`);
+
+--
+-- Constraints for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`budget_id`) REFERENCES `budgets` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `expenses_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`);
+COMMIT;
