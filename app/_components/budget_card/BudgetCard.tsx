@@ -1,126 +1,150 @@
 "use client";
 import { PlusIcon } from "@/app/_icons";
-import { Expense, IExpense } from "./Expense";
-import { useEffect, useId, useState } from "react";
-
-function getMonthName(monthNumber: number): string {
-  // Create a new Date object. The month is zero-indexed, so subtract 1.
-  // We use an arbitrary day and year as they don't affect the month name.
-  const date = new Date(2000, monthNumber - 1, 1);
-
-  // Use toLocaleString to get the month name in English (en-US locale)
-  // with the 'long' format for the full month name.
-  return date.toLocaleString("en-US", { month: "long" });
-}
-const emptyExpense: IExpense = {
+import { Expense } from "./Expense";
+import { useId, useState } from "react";
+import {
+  IBEBudgetWithCategories,
+  IBECategory,
+  IBECategoryBudgetDetail,
+} from "@/app/_types/be_types";
+import { getMonthName } from "@/app/lib/int";
+import { createBudgetCategory, updateBudgetCategory } from "@/app/_api/budget";
+const emptyExpense: IBECategoryBudgetDetail = {
   id: Date.now(),
-  categoryName: "",
-  plannedAmount: 0,
-  remainingAmount: 0,
+  category_name: "",
+  amount: 0,
+  remaining_amount: 0,
+  category_id: 0,
+  description: null,
 };
 
-const initialCategories: IExpense[] = [emptyExpense];
-
-export const BudgetCard = () => {
-  const [categories, setCategories] = useState(initialCategories);
-  const [budgetAmount, setBudgetAmount] = useState(0);
-  const [monthName, setMonthName] = useState("");
-
+export const BudgetCard = ({
+  data,
+  categories,
+}: {
+  data: IBEBudgetWithCategories;
+  categories: IBECategory[];
+}) => {
+  const [budgetCategories, setBudgetCategories] = useState([
+    ...data.category_budgets,
+    emptyExpense,
+  ]);
+  const [totalBudget, setTotalBudget] = useState(Number(data.total_budget));
   const budgetAmountId = useId();
   const savingsId = useId();
 
-  useEffect(() => {
-    const getBudgets = async () => {
-      const response = await fetch("http://localhost:5000/api/budgets/user/1");
-      const data = await response.json();
-
-      data.data.forEach((budget: any) => {
-        setBudgetAmount(budget.total_budget);
-        setMonthName(getMonthName(budget.month));
-
-        setCategories(
-          budget.category_budgets.map((catBudget: any) => ({
-            id: catBudget.id,
-            categoryName: catBudget.category_name,
-            plannedAmount: catBudget.amount,
-            remainingAmount: catBudget.remaining_amount,
-          }))
-        );
-      });
-    };
-
-    getBudgets();
-  }, []);
-
   const handleAddCategory = () => {
-    setCategories([...categories, { ...emptyExpense, id: Date.now() }]);
+    setBudgetCategories([...budgetCategories, { ...emptyExpense, id: Date.now() }]);
   };
 
-  const handleEditCategory = (id: number, field: keyof IExpense, value: string | number) => {
-    const updatedCategories = categories.map((category) =>
-      category.id === id ? { ...category, [field]: value } : category
+  const handleEditBudgetCategory = async (
+    id: number,
+    field: keyof IBECategoryBudgetDetail,
+    value: string | number
+  ) => {
+    const updatedCategories = budgetCategories.map((budgetCategory) => {
+      return budgetCategory.id === id ? { ...budgetCategory, [field]: value } : budgetCategory;
+    });
+
+    const unsavedCategory = updatedCategories.find(
+      (cat) => cat.id === id && cat.id > 1000 && cat.amount > 0 && cat.remaining_amount > 0
     );
-    setCategories(updatedCategories);
+
+    if (!unsavedCategory) {
+      setBudgetCategories(updatedCategories);
+      return;
+    }
+
+    await createBudgetCategory({
+      amount: unsavedCategory.amount,
+      budget_id: data.id,
+      category_id: unsavedCategory.category_id,
+      description: unsavedCategory.description || undefined,
+    });
+  };
+
+  const handleUpdateBudgetCategory = (id: number) => {
+    const updateCategory = budgetCategories.find((cat) => cat.id === id);
+    if (!updateCategory) return;
+
+    updateBudgetCategory(updateCategory.id, {
+      amount: updateCategory.amount,
+      remaining_amount: updateCategory.remaining_amount,
+      description: updateCategory.description || undefined,
+    });
   };
 
   const handleDeleteCategory = (id: number) => {
-    const updatedCategories = categories.filter((category) => category.id !== id);
+    const updatedCategories = budgetCategories.filter((category) => category.id !== id);
 
     if (updatedCategories.length === 0) {
       updatedCategories.push({ ...emptyExpense, id: Date.now() });
     }
 
-    setCategories(updatedCategories);
+    setBudgetCategories(updatedCategories);
   };
 
   const handleEditInitialAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value) || 0;
-    setBudgetAmount(value);
+    setTotalBudget(value);
   };
 
-  const savings =
-    budgetAmount - categories.reduce((sum, category) => sum + category.plannedAmount, 0);
+  const availableCategories = categories
+    .filter((cat) => !budgetCategories.some((bc) => bc.category_id === cat.id))
+    .map((cat) => ({ label: cat.name, value: cat.id }));
+
+  const savings = () => {
+    return (
+      totalBudget - budgetCategories.reduce((sum, category) => sum + Number(category.amount), 0)
+    );
+  };
 
   const canBeDeleted =
-    categories.length > 1 ||
-    categories[0].categoryName !== "" ||
-    categories[0].plannedAmount !== 0 ||
-    categories[0].remainingAmount !== 0;
-
-  console.log("sdfasd", budgetAmount);
+    budgetCategories.length > 1 ||
+    budgetCategories[0].category_name !== "" ||
+    budgetCategories[0].amount !== 0 ||
+    budgetCategories[0].remaining_amount !== 0;
 
   return (
     <div className="bg-base-100 shadow-sm flex flex-col gap-2 rounded-md w-full justify-between">
       <div className="flex flex-col gap-2">
         <div>
-          <h2 className="bg-gray-200 px-4 py-2 font-bold font-mono">November</h2>
+          <h2 className="bg-gray-200 px-4 py-2 font-bold font-mono">{getMonthName(data.month)}</h2>
           <label
             htmlFor={budgetAmountId}
             className="bg-gray-200 px-4 py-2 grid grid-cols-2 justify-between items-center"
           >
             <span>Budget Amount</span>
-            <input
-              type="number"
-              onChange={handleEditInitialAmount}
-              className="focus:input h-10 text-right"
-              title="Planned amount"
-              placeholder="Planned amount"
-              min="0"
-              max={"999999"}
-              maxLength={6}
-              value={budgetAmount}
-              id={budgetAmountId}
-            />
+            <div className="text-right">
+              <input
+                type="number"
+                onChange={handleEditInitialAmount}
+                className="focus:input h-10 text-right"
+                title="Planned amount"
+                placeholder="Planned amount"
+                min="0"
+                max={"999999"}
+                maxLength={6}
+                value={totalBudget}
+                id={budgetAmountId}
+              />
+            </div>
           </label>
         </div>
         <div className="">
-          {categories.map((category, index) => (
+          {budgetCategories.map((category, index) => (
             <div key={category.id || index}>
               <Expense
                 canBeDeleted={canBeDeleted}
                 {...category}
+                selectedCategory={{
+                  label: categories.find((cat) => cat.id === category.category_id)?.name || "",
+                  value: category.category_id,
+                }}
                 onDelete={handleDeleteCategory}
-                onEdit={handleEditCategory}
+                onEdit={handleEditBudgetCategory}
+                onBlur={() => handleUpdateBudgetCategory(category.id)}
+                categories={availableCategories}
               />
             </div>
           ))}
@@ -142,11 +166,11 @@ export const BudgetCard = () => {
         <span>Savings</span>
         <input
           type="number"
-          className={`focus:input h-10 text-right ${savings < 0 ? "text-red-500" : ""} ${
-            savings > 1000 ? "text-green-500" : ""
+          className={`focus:input h-10 text-right ${savings() < 0 ? "text-red-500" : ""} ${
+            savings() > 1000 ? "text-green-500" : ""
           }`}
           title="Savings"
-          value={savings}
+          value={savings()}
           id={savingsId}
           disabled
         />

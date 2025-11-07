@@ -1,42 +1,48 @@
+"use client";
 import { MinusIcon, XIcon } from "@/app/_icons";
-import { use, useState } from "react";
+import { IBECategoryBudgetDetail } from "@/app/_types/be_types";
+import { useState } from "react";
+import { SingleValue } from "react-select";
+import SelectCreatable from "react-select/creatable";
 
-export interface IExpense {
-  id: number;
-  categoryName: string;
-  plannedAmount: number;
-  remainingAmount: number;
-}
-
-interface IExpenseProps extends IExpense {
-  onEdit: (id: number, field: keyof IExpense, value: string | number) => void;
+interface IExpenseProps extends IBECategoryBudgetDetail {
+  onEdit: (id: number, field: keyof IBECategoryBudgetDetail, value: number | string) => void;
+  onBlur: () => void;
   onDelete: (id: number) => void;
   canBeDeleted?: boolean;
+  selectedCategory: SingleValue<{ label: string; value: number }>;
+  categories?: { label: string; value: number }[];
 }
 
 export const Expense = ({
   id,
-  categoryName,
-  plannedAmount,
-  remainingAmount,
+  selectedCategory,
+  amount,
+  remaining_amount,
   onDelete,
   onEdit,
+  onBlur,
   canBeDeleted = true,
+  categories = [],
 }: IExpenseProps) => {
   const [subtractAmount, setSubtractAmount] = useState(0);
 
-  const handleEditCategoryName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onEdit(id, "categoryName", e.target.value);
+  const handleEditcategory_name = (
+    categoryOption: SingleValue<{ label: string; value: number } | undefined>
+  ) => {
+    if (!categoryOption) return;
+    onEdit(id, "category_name", categoryOption.label);
+    onEdit(id, "category_id", Number(categoryOption.value));
   };
 
   const handleEditInitialAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value) || 0;
-    onEdit(id, "plannedAmount", value);
+    onEdit(id, "amount", value);
   };
 
-  const handleEditRemainingAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditremaining_amount = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value) || 0;
-    onEdit(id, "remainingAmount", value);
+    onEdit(id, "remaining_amount", value);
   };
 
   const handleDeleteCategory = () => {
@@ -44,8 +50,8 @@ export const Expense = ({
   };
 
   const handleSubtractAmount = () => {
-    const newRemainingAmount = Math.max(0, remainingAmount - subtractAmount);
-    onEdit(id, "remainingAmount", newRemainingAmount);
+    const newremaining_amount = Math.max(0, remaining_amount - subtractAmount);
+    onEdit(id, "remaining_amount", newremaining_amount);
     setSubtractAmount(0);
     document.getElementById("my_modal_3")?.close();
   };
@@ -57,13 +63,10 @@ export const Expense = ({
 
   return (
     <div className="grid grid-cols-[2fr_1fr_1fr_auto]">
-      <input
-        value={categoryName}
-        onChange={handleEditCategoryName}
-        type="text"
-        className="input"
-        placeholder="Category name"
-        title="Category name"
+      <SelectCreatable
+        defaultValue={selectedCategory || null}
+        onChange={handleEditcategory_name}
+        options={categories}
       />
       <input
         type="number"
@@ -74,23 +77,25 @@ export const Expense = ({
         min="0"
         max={"99999"}
         maxLength={5}
-        value={plannedAmount}
+        value={amount}
+        onBlur={onBlur}
       />
       <input
         type="number"
-        onChange={handleEditRemainingAmount}
+        onChange={handleEditremaining_amount}
         className={`input ${
-          remainingAmount > plannedAmount || remainingAmount < 0 ? "input-error" : ""
+          remaining_amount > amount || remaining_amount < 0 ? "input-error" : ""
         }`}
         title="Remaining amount"
         placeholder="Remaining amount"
         min="0"
         max={"99999"}
         maxLength={5}
-        value={remainingAmount}
+        value={remaining_amount}
+        onBlur={onBlur}
       />
       <div className="flex justify-end min-w-20">
-        {remainingAmount > 0 && plannedAmount >= remainingAmount && (
+        {remaining_amount > 0 && amount >= remaining_amount && (
           <button
             title="Subtract"
             onClick={() => document.getElementById("my_modal_3")?.showModal()}
@@ -121,7 +126,7 @@ export const Expense = ({
             <input
               type="number"
               onChange={handleChangeSubtractAmount}
-              className={`input ${remainingAmount - subtractAmount < 0 ? "input-error" : ""}`}
+              className={`input ${remaining_amount - subtractAmount < 0 ? "input-error" : ""}`}
               title="Planned amount"
               placeholder="Planned amount"
               min="0"
@@ -129,7 +134,7 @@ export const Expense = ({
               maxLength={5}
               value={subtractAmount}
             />
-            {remainingAmount - subtractAmount < 0 && (
+            {remaining_amount - subtractAmount < 0 && (
               <p className="text-red-500 text-sm mt-1">
                 Cannot subtract more than remaining amount
               </p>
@@ -146,7 +151,7 @@ export const Expense = ({
             </button>
             <button
               type="button"
-              disabled={remainingAmount - subtractAmount < 0}
+              disabled={remaining_amount - subtractAmount < 0}
               onClick={handleSubtractAmount}
               className="btn btn-primary"
             >
