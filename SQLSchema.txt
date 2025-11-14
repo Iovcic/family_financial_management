@@ -1,0 +1,159 @@
+-- =========================
+-- USERS
+-- =========================
+CREATE TABLE users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    role ENUM('user','admin') NOT NULL DEFAULT 'user'
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE
+    reset_token VARCHAR(255) NULL
+    reset_token_expiry DATETIME NULL
+    token_version INT NOT NULL DEFAULT 1;
+);
+
+-- =========================
+-- BUDGETS
+-- =========================
+CREATE TABLE budgets (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- BUDGET YEARS
+-- =========================
+CREATE TABLE budget_years (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_id BIGINT UNSIGNED NOT NULL,
+    year SMALLINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (budget_id, year),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- BUDGET MONTHS
+-- =========================
+CREATE TABLE budget_months (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_year_id BIGINT UNSIGNED NOT NULL,
+    month TINYINT NOT NULL, -- 1..12 (not enforced)
+    amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (budget_year_id, month),
+    FOREIGN KEY (budget_year_id) REFERENCES budget_years(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- LOANS
+-- =========================
+CREATE TABLE loans (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    loan_type ENUM('bankLoan','personLoan') NOT NULL,
+    start_month SMALLINT NOT NULL,
+    end_month SMALLINT NOT NULL,
+    contract_number VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- BUDGET MONTH LOANS
+-- =========================
+CREATE TABLE budget_month_loans (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_month_id BIGINT UNSIGNED NOT NULL,
+    loan_id BIGINT UNSIGNED NOT NULL,
+    amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    description TEXT,
+
+    FOREIGN KEY (budget_month_id) REFERENCES budget_months(id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (loan_id) REFERENCES loans(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- BUDGET CATEGORIES
+-- =========================
+CREATE TABLE budget_categories (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_month_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NOT NULL,
+    amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    description TEXT,
+
+    FOREIGN KEY (budget_month_id) REFERENCES budget_months(id)
+        ON DELETE CASCADE
+);
+
+-- =========================
+-- EXPENSES
+-- =========================
+CREATE TABLE expenses (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_month_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NULL,
+    loan_id BIGINT UNSIGNED NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    type ENUM('expense','loan') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (budget_month_id) REFERENCES budget_months(id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES budget_categories(id)
+        ON DELETE SET NULL,
+    FOREIGN KEY (loan_id) REFERENCES loans(id)
+        ON DELETE SET NULL
+);
+
+-- =========================
+-- BUDGET MEMBERS
+-- =========================
+CREATE TABLE budget_members (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    budget_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    role ENUM('owner','member') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+        ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    UNIQUE (budget_id, user_id)
+);
+
+CREATE TABLE refresh_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    token VARCHAR(512) NOT NULL,       -- store the actual refresh token
+    expires_at DATETIME NOT NULL,      -- expiration time
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revoked BOOLEAN DEFAULT FALSE,     -- true if token was revoked
+    replaced_by_token VARCHAR(512)
+
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    UNIQUE (token)                     -- prevent duplicate tokens
+);

@@ -5,9 +5,6 @@ export const getUserBudgets = fetchData<IBEBudgetWithCategories[]>("/budgets/use
     method: "GET",
 });
 
-    method: "GET"
-});
-
 export const createCategory = async () => {
     const res = await fetchData<IBECategory>("/categories", { method: "POST" });
 

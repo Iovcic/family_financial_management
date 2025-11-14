@@ -7,7 +7,7 @@ import {
   IBECategory,
   IBECategoryBudgetDetail,
 } from "@/app/_types/be_types";
-import { getMonthName } from "@/app/lib/int";
+import { getMonthName } from "@/lib/int";
 import { createBudgetCategory, updateBudgetCategory } from "@/app/_api/budget";
 const emptyExpense: IBECategoryBudgetDetail = {
   id: Date.now(),

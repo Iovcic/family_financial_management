@@ -18,12 +18,11 @@ export async function fetchData<T = any>(
                 .join("&")
             : "";
 
-        const response = await fetch(`${process.env.API_HOST || "http://localhost:5000/api"}${url}${queryString}`, {
+        const response = await fetch(`${process.env.API_URL || "http://localhost:5000/api"}${url}${queryString}`, {
             headers: {
                 "Content-Type": "application/json",
                 ...(headers || {}),
             },
-            cache: "no-store", // good default for fresh data in Next.js
             ...rest,
         });
 
@@ -34,9 +33,11 @@ export async function fetchData<T = any>(
 
         // Try parsing as JSON (fallback to text)
         const contentType = response.headers.get("content-type");
+
         if (contentType && contentType.includes("application/json")) {
             const res = await response.json();
-            return res.data as T;
+
+            return res;
         } else {
             const res = await response.text();
             return res as T;

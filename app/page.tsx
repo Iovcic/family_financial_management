@@ -1,11 +1,7 @@
 import { Suspense } from "react";
 import { BudgetCardList } from "./_components/budget_card/BudgetCardList";
-import { getUserBudgets, getUserCategories } from "./_api/budget";
 
 export default function Home() {
-  const budgets = getUserBudgets;
-  const categories = getUserCategories;
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
@@ -15,9 +11,6 @@ export default function Home() {
             <button className="btn join-item">2024</button>
             <button className="btn join-item">2023</button>
           </div>
-          <Suspense fallback={<div>Loading...</div>}>
-            <BudgetCardList data={budgets} categories={categories} />
-          </Suspense>
         </div>
       </main>
     </div>
